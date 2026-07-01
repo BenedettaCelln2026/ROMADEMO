@@ -216,13 +216,11 @@
   </div>
 
   <!-- COMPASS HINT -->
-  <div id="compass-hint">
-    <div class="compass-arrow-wrap">
-      <div class="compass-ring">
-        <span class="compass-arrow" id="compass-arrow">↑</span>
-      </div>
+  <div id="compass-hint" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:14px;z-index:9;opacity:0;pointer-events:none;transition:opacity 0.4s;">
+    <div style="width:80px;height:80px;border-radius:50%;border:2px solid rgba(92,184,92,0.5);display:flex;align-items:center;justify-content:center;background:rgba(4,18,18,0.8);backdrop-filter:blur(8px);">
+      <span id="compass-arrow" style="font-size:36px;display:inline-block;transition:transform 0.3s ease;">↑</span>
     </div>
-    <div class="compass-text" id="compass-text">Punta verso il palazzo</div>
+    <div id="compass-text" style="font-size:12px;color:rgba(232,248,247,0.8);letter-spacing:2px;text-transform:uppercase;text-align:center;background:rgba(4,18,18,0.8);padding:6px 14px;border-radius:20px;border:1px solid rgba(92,184,92,0.4);backdrop-filter:blur(6px);">Punta verso il palazzo</div>
   </div>
 
   <!-- AR labels -->
@@ -335,17 +333,92 @@ function onGPS(pos){
 }
 
 function activateAR(){
-  // Logo posizionato a sinistra-centro (palazzi a OSO dal rooftop)
-  auraWrap.style.left='40%';
-  auraWrap.style.top='33%';
+  startCompass();
+}
+
+function deactivateAR(){
+  auraWrap.classList.remove('visible');
+  finalMsg.classList.remove('visible');
+  [labelA,labelB,labelC].forEach(l=>{ l.classList.remove('visible'); l.textContent=''; });
+  const ch = document.getElementById('compass-hint');
+  if(ch) ch.classList.remove('visible');
+}
+
+function startCompass(){
+  if(typeof DeviceOrientationEvent !== 'undefined' &&
+     typeof DeviceOrientationEvent.requestPermission === 'function'){
+    // iOS 13+ — chiede permesso esplicito
+    DeviceOrientationEvent.requestPermission()
+      .then(state => {
+        if(state === 'granted'){ listenCompass(); }
+        else { showLogoAlways(); }
+      })
+      .catch(() => showLogoAlways());
+  } else if(window.DeviceOrientationEvent){
+    // Android / altri browser
+    listenCompass();
+  } else {
+    showLogoAlways();
+  }
+}
+
+function listenCompass(){
+  const ch = document.getElementById('compass-hint');
+  if(ch) ch.classList.add('visible');
+  window.addEventListener('deviceorientationabsolute', onOrientation, true);
+  window.addEventListener('deviceorientation', onOrientation, true);
+}
+
+function showLogoAlways(){
+  // Fallback: nessuna bussola disponibile
+  auraWrap.style.left='58%';
+  auraWrap.style.top='30%';
   auraWrap.classList.add('visible');
   setTimeout(()=>{ setLabels(currentLayer); }, 700);
   setTimeout(()=>{ finalMsg.classList.add('visible'); }, 2000);
 }
-function deactivateAR(){
-  auraWrap.classList.remove('visible');
-  [labelA,labelB,labelC].forEach(l=>l.classList.remove('visible'));
-  finalMsg.classList.remove('visible');
+
+function onOrientation(e){
+  let heading = null;
+  if(e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null){
+    heading = e.webkitCompassHeading; // Safari iOS (già in gradi bussola)
+  } else if(e.absolute === true && e.alpha !== null){
+    heading = (360 - e.alpha) % 360; // Android absolute
+  } else if(e.alpha !== null){
+    heading = (360 - e.alpha) % 360; // Android fallback
+  }
+  if(heading === null) return;
+
+  let diff = TARGET_BEARING - heading;
+  while(diff > 180) diff -= 360;
+  while(diff < -180) diff += 360;
+  const absDiff = Math.abs(diff);
+
+  const compassHint = document.getElementById('compass-hint');
+  const compassArrow = document.getElementById('compass-arrow');
+  const compassText = document.getElementById('compass-text');
+
+  if(absDiff <= BEARING_TOLERANCE){
+    // ✅ Punta verso il palazzo
+    if(compassHint) compassHint.classList.remove('visible');
+    auraWrap.style.left='58%';
+    auraWrap.style.top='30%';
+    auraWrap.classList.add('visible');
+    setLabels(currentLayer);
+    finalMsg.classList.add('visible');
+  } else {
+    // ❌ Direzione sbagliata
+    auraWrap.classList.remove('visible');
+    finalMsg.classList.remove('visible');
+    [labelA,labelB,labelC].forEach(l=>l.classList.remove('visible'));
+    if(compassHint) compassHint.classList.add('visible');
+    if(compassArrow) compassArrow.style.transform = `rotate(${diff}deg)`;
+    if(compassText){
+      if(absDiff < 60) compassText.textContent = 'Quasi! Aggiusta leggermente';
+      else if(diff > 0) compassText.textContent = 'Gira a destra →';
+      else compassText.textContent = '← Gira a sinistra';
+    }
+  }
 }
 
 function setLabels(layer){
@@ -416,8 +489,17 @@ if(!('ontouchstart' in window)||location.search.includes('demo')){
     distDisplay.textContent='Modalità demo';
     scanning.classList.add('hide');
     notInRange.classList.remove('visible');
-    activateAR(); setLabels(currentLayer);
+    activateAR(); // avvia bussola anche in demo
   },2800);
+}
+
+// Tasto per testare bussola manualmente (solo in demo/debug)
+if(location.search.includes('debug')){
+  document.addEventListener('keydown', e=>{
+    if(e.key==='ArrowRight'){ onOrientation({webkitCompassHeading: TARGET_BEARING + 90}); }
+    if(e.key==='ArrowLeft'){ onOrientation({webkitCompassHeading: TARGET_BEARING - 90}); }
+    if(e.key==='ArrowUp'){ onOrientation({webkitCompassHeading: TARGET_BEARING}); }
+  });
 }
 </script>
 </body>

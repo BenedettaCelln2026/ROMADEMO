@@ -120,6 +120,39 @@
   @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
   @keyframes expand { 0%{width:50px;height:50px;opacity:.8} 100%{width:200px;height:200px;opacity:0} }
   @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  /* ── COMPASS INDICATOR ── */
+  #compass-hint {
+    position:absolute; top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    display:flex; flex-direction:column; align-items:center; gap:14px;
+    z-index:9; opacity:0; pointer-events:none;
+    transition:opacity 0.4s;
+  }
+  #compass-hint.visible { opacity:1; }
+  .compass-arrow-wrap {
+    position:relative; width:80px; height:80px;
+  }
+  .compass-ring {
+    width:80px; height:80px; border-radius:50%;
+    border:2px solid rgba(92,184,92,0.4);
+    display:flex; align-items:center; justify-content:center;
+    background:rgba(4,18,18,0.7);
+    backdrop-filter:blur(8px);
+  }
+  .compass-arrow {
+    font-size:32px;
+    transition:transform 0.3s ease;
+    display:inline-block;
+  }
+  .compass-text {
+    font-size:11px; color:rgba(232,248,247,0.7);
+    letter-spacing:2px; text-transform:uppercase;
+    text-align:center; background:rgba(4,18,18,0.7);
+    padding:5px 12px; border-radius:20px;
+    border:1px solid rgba(92,184,92,0.3);
+    backdrop-filter:blur(6px);
+  }
+
   @keyframes aura-expand {
     0% { transform:translate(-50%,-50%) scale(.6); opacity:.7; }
     100% { transform:translate(-50%,-50%) scale(1.4); opacity:0; }
@@ -182,6 +215,16 @@
     </div>
   </div>
 
+  <!-- COMPASS HINT -->
+  <div id="compass-hint">
+    <div class="compass-arrow-wrap">
+      <div class="compass-ring">
+        <span class="compass-arrow" id="compass-arrow">↑</span>
+      </div>
+    </div>
+    <div class="compass-text" id="compass-text">Punta verso il palazzo</div>
+  </div>
+
   <!-- AR labels -->
   <div class="ar-label" id="label-a" style="top:36%;left:12%"></div>
   <div class="ar-label" id="label-b" style="top:27%;right:10%"></div>
@@ -213,6 +256,12 @@ document.getElementById('ar-logo-img').src = LOGO_SRC;
 
 // ── STATE ──
 let currentLayer = 'coverage', inRange = false;
+let deviceHeading = null;
+let compassActive = false;
+
+// Direzione verso il palazzo HDI da Piazzale dell'Industria (calcolata: ~150° Sud-Est)
+const TARGET_BEARING = 150;
+const BEARING_TOLERANCE = 35; // gradi di tolleranza (±35°)
 
 // ── UI ──
 const splash = document.getElementById('splash');

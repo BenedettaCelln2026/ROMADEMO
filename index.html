@@ -127,13 +127,14 @@ body {
 }
 #ar-logo.show { opacity:1; }
 .ar-logo-sphere {
-  width:230px; height:230px; border-radius:50%;
-  background: radial-gradient(circle, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.6) 55%, transparent 75%);
-  border:none;
+  width:240px; height:240px; border-radius:50%;
+  background: radial-gradient(circle, rgba(0,0,0,0.45) 0%, transparent 70%);
+  border: 1.5px solid rgba(92,184,92,0.4);
   box-shadow:
-    0 0 35px rgba(92,184,92,0.7),
-    0 0 80px rgba(92,184,92,0.35),
-    0 0 120px rgba(92,184,92,0.15);
+    0 0 30px rgba(92,184,92,0.6),
+    0 0 70px rgba(92,184,92,0.3),
+    0 0 120px rgba(92,184,92,0.12),
+    inset 0 0 40px rgba(92,184,92,0.08);
   display:flex; align-items:center; justify-content:center;
   animation:float 3.5s ease-in-out infinite;
   position:relative;
@@ -221,9 +222,9 @@ body {
   animation:aura-pulse 3s ease-out infinite;
   pointer-events:none;
 }
-.r1 { width:260px; height:260px; margin-left:-130px; margin-top:-130px; animation-delay:0s; border-color:rgba(92,184,92,0.5); }
-.r2 { width:340px; height:340px; margin-left:-170px; margin-top:-170px; animation-delay:1s; border-color:rgba(92,184,92,0.35); }
-.r3 { width:420px; height:420px; margin-left:-210px; margin-top:-210px; animation-delay:2s; border-color:rgba(92,184,92,0.2); }
+.r1 { width:270px; height:270px; margin-left:-135px; margin-top:-135px; animation-delay:0s; border-color:rgba(92,184,92,0.55); }
+.r2 { width:360px; height:360px; margin-left:-180px; margin-top:-180px; animation-delay:1s;  border-color:rgba(92,184,92,0.35); }
+.r3 { width:450px; height:450px; margin-left:-225px; margin-top:-225px; animation-delay:2s;  border-color:rgba(92,184,92,0.18); }
 
 /* ══ KEYFRAMES ══ */
 @keyframes blink { 0%,100%{opacity:1}50%{opacity:.25} }
@@ -404,7 +405,7 @@ function onGPS(pos){
 // ══ MOSTRA LOGO AR ══
 function showARLogo(){
   arLogo.style.left = '50%';
-  arLogo.style.top  = '35%';
+  arLogo.style.top  = '32%';
   arLogo.classList.add('show');
   setLayer(currentLayer);
   bottomUI.classList.add('show');

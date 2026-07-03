@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Cellnex AR — Roma EUR</title>
+<title>Cellnex AR — Milano</title>
 <style>
 * { margin:0; padding:0; box-sizing:border-box; }
 :root {
@@ -116,28 +116,7 @@ body {
 }
 #scanning p { font-size:10px; color:var(--teal); letter-spacing:3px; text-transform:uppercase; margin-top:60px; }
 
-/* ══ BUSSOLA ══ */
-#compass {
-  position:absolute; top:50%; left:50%;
-  transform:translate(-50%,-60%);
-  display:flex; flex-direction:column; align-items:center; gap:14px;
-  opacity:0; pointer-events:none; transition:opacity .4s; z-index:10;
-}
-#compass.show { opacity:1; }
-.c-ring {
-  width:80px; height:80px; border-radius:50%;
-  border:2px solid rgba(92,184,92,.45);
-  display:flex; align-items:center; justify-content:center;
-  background:rgba(6,14,14,.8); backdrop-filter:blur(8px);
-}
-#c-arrow { font-size:36px; display:inline-block; transition:transform .25s ease; }
-#c-text {
-  font-size:11px; color:rgba(232,248,247,.8);
-  letter-spacing:2px; text-transform:uppercase; text-align:center;
-  background:rgba(6,14,14,.8); padding:5px 14px;
-  border-radius:20px; border:1px solid rgba(92,184,92,.35);
-  backdrop-filter:blur(6px);
-}
+
 
 /* ══ LOGO AR (sopra palazzo) ══ */
 #ar-logo {
@@ -289,15 +268,7 @@ body {
     <div style="font-size:28px;margin-bottom:6px;">📍</div>
     <h3>Fuori zona</h3>
     <div id="dist-num">—</div>
-    <p>Raggiungi Piazzale dell'Industria 40, Roma EUR per attivare l'esperienza AR.</p>
-  </div>
-
-  <!-- Bussola -->
-  <div id="compass">
-    <div class="c-ring">
-      <span id="c-arrow">↑</span>
-    </div>
-    <div id="c-text">Punta verso il palazzo</div>
+    <p>Inquadra lo skyline di Milano — Torre Unicredit e Porta Nuova — e scopri la rete Cellnex in realtà aumentata.</p>
   </div>
 
   <!-- Logo AR (appare solo quando bussola ok) -->
@@ -324,7 +295,7 @@ body {
     <!-- Riga messaggio + sub -->
     <div id="msg-row">
       <div id="msg-main">Connected — Sempre e ovunque</div>
-      <div id="msg-sub">Cellnex · Roma EUR</div>
+      <div id="msg-sub">Cellnex · Milano</div>
     </div>
     <!-- Layer switcher -->
     <div id="layer-bar">
@@ -338,8 +309,8 @@ body {
 
 <script>
 // ══ CONFIG ══
-const ROOFTOP_LAT = 41.8425, ROOFTOP_LNG = 12.4715;
-const ACTIVATION_RADIUS_M = 700;
+const ROOFTOP_LAT = 45.4848, ROOFTOP_LNG = 9.1942;
+const ACTIVATION_RADIUS_M = 2000;
 const TARGET_BEARING = 150;   // direzione palazzo HDI (~Sud-Est)
 const BEARING_TOL    = 35;    // tolleranza ±35°
 
@@ -350,9 +321,8 @@ document.getElementById('splash-logo').src = SPLASH_LOGO;
 document.getElementById('ar-logo-img').src  = AR_LOGO;
 
 // ══ STATE ══
-let inRange = false, compassReady = false;
+let inRange = false;
 let currentLayer = 'coverage';
-let headingOk = false;
 
 // ══ REFS ══
 const $ = id => document.getElementById(id);
@@ -367,9 +337,6 @@ const gpsDist   = $('gps-dist');
 const scanning  = $('scanning');
 const outRange  = $('out-of-range');
 const distNum   = $('dist-num');
-const compass   = $('compass');
-const cArrow    = $('c-arrow');
-const cText     = $('c-text');
 const arLogo    = $('ar-logo');
 const bottomUI  = $('bottom-ui');
 const msgMain   = $('msg-main');
@@ -412,106 +379,37 @@ function onGPS(pos){
   const d = distM(pos.coords.latitude, pos.coords.longitude, ROOFTOP_LAT, ROOFTOP_LNG);
   const ds = d<1000 ? Math.round(d)+'m' : (d/1000).toFixed(1)+'km';
   scanning.classList.add('hide');
-  gpsDot.className = 'gps-dot ok';
 
   if(d <= ACTIVATION_RADIUS_M){
     inRange = true;
     gpsDot.className = 'gps-dot near';
-    gpsLabel.textContent = '📍 Zona attiva — Punta verso il palazzo';
+    gpsLabel.textContent = '📍 Zona attiva — Skyline Milano';
     gpsDist.textContent = ds;
     outRange.classList.remove('show');
-    // Avvia bussola (una volta sola)
-    if(!compassReady){ compassReady=true; startCompass(); }
+    if(!arLogo.classList.contains('show')){ showARLogo(); }
   } else {
     inRange = false;
+    gpsDot.className = 'gps-dot ok';
     gpsLabel.textContent = 'GPS attivo — fuori zona';
     gpsDist.textContent = ds;
     distNum.textContent = ds;
     outRange.classList.add('show');
     hideARLogo();
-    bottomUI.classList.remove('show');
-    compass.classList.remove('show');
   }
 }
 
-// ══ BUSSOLA ══
-function startCompass(){
-  if(typeof DeviceOrientationEvent !== 'undefined' &&
-     typeof DeviceOrientationEvent.requestPermission === 'function'){
-    // iOS 13+ — richiede permesso esplicito
-    DeviceOrientationEvent.requestPermission()
-      .then(s => {
-        if(s==='granted'){
-          listenOrientation();
-        } else {
-          // Permesso negato: mostra solo bussola statica, NO logo
-          compass.classList.add('show');
-          cText.textContent = 'Abilita i sensori di movimento in Impostazioni → Safari';
-        }
-      })
-      .catch(()=> {
-        compass.classList.add('show');
-        cText.textContent = 'Abilita i sensori di movimento in Impostazioni → Safari';
-      });
-  } else if(window.DeviceOrientationEvent){
-    listenOrientation();
-  } else {
-    // Nessun sensore disponibile
-    compass.classList.add('show');
-    cText.textContent = 'Sensore bussola non disponibile su questo dispositivo';
-  }
-}
-
-function listenOrientation(){
-  compass.classList.add('show');
-  window.addEventListener('deviceorientationabsolute', onOrientation, true);
-  window.addEventListener('deviceorientation',         onOrientation, true);
-}
-
-function onOrientation(e){
-  if(!inRange) return;
-  let h = null;
-  if(e.webkitCompassHeading != null)     h = e.webkitCompassHeading;         // iOS Safari
-  else if(e.absolute && e.alpha!=null)   h = (360 - e.alpha) % 360;          // Android absolute
-  else if(e.alpha != null)               h = (360 - e.alpha) % 360;          // Android fallback
-  if(h === null) return;
-
-  let diff = TARGET_BEARING - h;
-  while(diff > 180) diff -= 360;
-  while(diff < -180) diff += 360;
-  const abs = Math.abs(diff);
-
-  if(abs <= BEARING_TOL){
-    // ✅ Punta verso il palazzo
-    compass.classList.remove('show');
-    positionLogo();
-    arLogo.classList.add('show');
-    setLayer(currentLayer);
-    bottomUI.classList.add('show');
-    headingOk = true;
-  } else {
-    // ❌ Direzione sbagliata
-    headingOk = false;
-    arLogo.classList.remove('show');
-    bottomUI.classList.remove('show');
-    compass.classList.add('show');
-    cArrow.style.transform = `rotate(${diff}deg)`;
-    if(abs < 60)       cText.textContent = 'Quasi! Aggiusta leggermente';
-    else if(diff > 0)  cText.textContent = 'Gira a destra →';
-    else               cText.textContent = '← Gira a sinistra';
-  }
-}
-
-function positionLogo(){
-  // Palazzo a SSE → logo a destra-centro schermo
-  arLogo.style.left = '62%';
-  arLogo.style.top  = '38%';
+// ══ MOSTRA LOGO AR ══
+function showARLogo(){
+  arLogo.style.left = '42%';
+  arLogo.style.top  = '28%';
+  arLogo.classList.add('show');
+  setLayer(currentLayer);
+  bottomUI.classList.add('show');
 }
 
 function hideARLogo(){
   arLogo.classList.remove('show');
   bottomUI.classList.remove('show');
-  headingOk = false;
   [tagA,tagB,tagC].forEach(t=>{ t.classList.remove('show'); t.textContent=''; });
 }
 
@@ -521,7 +419,7 @@ function setLayer(layer){
   setTimeout(()=>{
     if(layer==='coverage'){
       tagA.textContent='🟢 Indoor Coverage Extended';
-      tagB.textContent='🟢 DAS Active — EUR';
+      tagB.textContent='🟢 DAS Active — Porta Nuova';
       msgMain.textContent='Copertura DAS attiva su tutta l\'area';
       tagA.classList.add('show'); tagB.classList.add('show');
     } else if(layer==='traffic'){
